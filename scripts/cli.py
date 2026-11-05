@@ -25,11 +25,11 @@ def defaults():
         "image": "ollama/ollama:latest",
         "storage_class": "local-path",
         "storage_gib": 10,
-        "input_context_tokens": 16384,
+        "input_context_tokens": 64000,
         "output_tokens": 512,
         "cpu_request": "2",
         "memory_request": "4Gi",
-        "memory_limit": "8Gi",
+        "memory_limit": "6Gi",
         "public_ingress": True,
         "token_file": "current_config/api-token",
     }
@@ -61,8 +61,10 @@ def validate(c, config):
         raise ValueError("host must be a DNS hostname")
     if not re.fullmatch(r"[\w.-]+:[\w.-]+", c["model"]) or not re.fullmatch(r"[\w.-]+:[\w.-]+", c["derived_model"]):
         raise ValueError("model and derived_model must be explicit Ollama tags")
-    if c["input_context_tokens"] < 2048 or c["input_context_tokens"] % 1024:
-        raise ValueError("input_context_tokens must be a multiple of 1024 and >= 2048")
+    if c["input_context_tokens"] < 2048 or (c["input_context_tokens"] % 1024 and c["input_context_tokens"] != 64000):
+        raise ValueError("input_context_tokens must be a multiple of 1024, except for the supported 64000-token maximum, and must be >= 2048")
+    if c["input_context_tokens"] > 64000:
+        raise ValueError("input_context_tokens cannot exceed 64000: LFM3-VL-2B has a 128000-token model context and Ollama context shift requires 2x runtime context")
     if c["output_tokens"] < 128:
         raise ValueError("output_tokens must be >= 128")
     if c["storage_gib"] < 5:
