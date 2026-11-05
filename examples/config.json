@@ -1,0 +1,17 @@
+{
+  "namespace": "lfm3-demo",
+  "host": "lfm3.example.com",
+  "ingress_class": "traefik",
+  "model": "lfm3-vl:2b",
+  "derived_model": "lfm3-vl-hermes:2b",
+  "image": "ollama/ollama:latest",
+  "storage_class": "local-path",
+  "storage_gib": 10,
+  "input_context_tokens": 16384,
+  "output_tokens": 512,
+  "cpu_request": "2",
+  "memory_request": "4Gi",
+  "memory_limit": "8Gi",
+  "public_ingress": true,
+  "token_file": "current_config/api-token"
+}
