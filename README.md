@@ -76,13 +76,23 @@ The configuration accepts `input_context_tokens`, not a misleading raw
 
 | Desired safe prompt budget | Runtime `num_ctx` | Approx. shift limit |
 |---:|---:|---:|
-| 16,384 (default) | 32,768 | 16,386 |
+| 16,384 | 32,768 | 16,386 |
 | 32,768 | 65,536 | 32,770 |
+| **64,000 (default and model maximum)** | **128,000** | **64,002** |
 
-Increasing the runtime context increases KV-cache memory. Confirm node capacity
-and set an appropriate `memory_limit` before choosing 32K usable input. The
-installer deliberately does not pretend that allocating `num_ctx=32768` makes
-32K input safe.
+LFM3-VL-2B advertises a 128K input-plus-output model context. The installer
+therefore caps `input_context_tokens` at 64,000 and derives `num_ctx=128000`:
+this is the highest runtime context supported by the model while accounting for
+Ollama's shift behavior. It does **not** make a 128K one-message prompt safe.
+
+Increasing runtime context increases KV-cache memory. In the original CPU-only
+LFM3 validation, Q4_K_M at 32K runtime measured about 2.59 GiB current and
+2.90 GiB peak cgroup memory with no OOM. The 128K setting starts with a 6 GiB
+container limit, not 12 GiB, but that is a testable starting boundary rather
+than a capacity guarantee. Node memory pressure, concurrent workloads, image
+size, vision input, and Ollama version all affect the result. Review free node
+memory, capture cgroup `memory.peak`, and revert before production use if the
+limit is approached or the node reports memory pressure.
 
 `./doctor.sh` verifies CPU-library startup logs and loaded runtime context. It
 also reports the calculated usable ceiling. It cannot make Ollama return a
@@ -105,9 +115,10 @@ chmod 600 /secure/lfm3.json
 
 Important fields:
 
-- `input_context_tokens`: safe usable prompt budget; default 16384
+- `input_context_tokens`: safe usable prompt budget; default and maximum 64000
+  (creates `num_ctx=128000`)
 - `output_tokens`: derived model `num_predict`; default 512
-- `memory_limit`: default 8Gi; change after capacity review for larger contexts
+- `memory_limit`: default 6Gi; validate actual cgroup peak before increasing it
 - `public_ingress`: defaults true; set false for internal-only Service access
 - `image`: pin a tested digest after validation; `latest` is only an initial
   convenience default

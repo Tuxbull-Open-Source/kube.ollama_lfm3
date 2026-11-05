@@ -17,8 +17,14 @@ class ContextTests(unittest.TestCase):
 
     def test_default_budgets(self):
         c = cli.defaults()
-        self.assertEqual(cli.runtime_context(c), 32768)
-        self.assertEqual(cli.usable_prompt_limit(cli.runtime_context(c)), 16386)
+        self.assertEqual(cli.runtime_context(c), 128000)
+        self.assertEqual(cli.usable_prompt_limit(cli.runtime_context(c)), 64002)
+
+    def test_lfm3_model_context_cap(self):
+        c = cli.defaults()
+        c["input_context_tokens"] = 64512
+        with self.assertRaisesRegex(ValueError, "cannot exceed 64000"):
+            cli.validate(c, Path("/tmp/config.json"))
 
     def test_render_has_cpu_and_gateway(self):
         c = cli.defaults()
