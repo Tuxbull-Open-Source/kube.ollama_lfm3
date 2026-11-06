@@ -30,8 +30,8 @@ in the private answers JSON or pass `--exposure`.
 
 | Mode | Installed runtime containers | Endpoint | Authentication |
 |---|---:|---|---|
-| `service` (default) | 1: Ollama | `http://ollama.<namespace>.svc:11434/v1` | None — use only within the cluster or behind your existing access layer |
-| `bearer_ingress` | 2: Ollama + Nginx gateway | `https://<host>/v1` | Generated Bearer token, enforced before Ollama |
+| `service` (default) | 1: Ollama | `http://ollama.NAMESPACE.svc:11434/v1` | None — use only within the cluster or behind your existing access layer |
+| `bearer_ingress` | 2: Ollama + Nginx gateway | `https://HOSTNAME/v1` | Generated Bearer token, enforced before Ollama |
 
 `service` creates no Ingress, Secret, ConfigMap, gateway Deployment, or
 gateway Service. It is the lean mode for internal clients. Ollama's local
@@ -65,7 +65,7 @@ across pod restarts.
 - Ollama Deployment, one replica, `Recreate`, no Kubernetes service-account
   token, no GPU resource/device request
 - `local-path` 10 GiB RWO PVC by default
-- private Service `ollama.<namespace>.svc:11434`
+- private Service `ollama.NAMESPACE.svc:11434`
 - Optional Nginx gateway that enforces Bearer authentication
 - Optional Traefik TLS Ingress to the gateway; DNS, public TLS certificate and
   Traefik remain operator-owned prerequisites
@@ -157,8 +157,10 @@ Important fields:
 - The namespace must be new or contain only objects labelled
   `app.kubernetes.io/managed-by=kube.ollama_lfm3`, plus Kubernetes baseline
   objects. The installer refuses to adopt foreign resources.
-- No Kubernetes-level authentication is added to raw Ollama; do not publish the
-  `ollama` Service directly. Only expose the token gateway.
+- No Kubernetes-level authentication is added to raw Ollama. Do not publish
+  the `ollama` Service directly; use `bearer_ingress` when this installer must
+  provide public exposure, or put the service behind an independently operated
+  access layer.
 - LFM3-VL-2B supports vision and tools in Ollama but Liquid AI does not
   recommend it for coding, complex reasoning or long multi-turn conversations.
   Position it as a bounded demo model.
