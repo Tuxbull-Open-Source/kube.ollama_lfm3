@@ -12,6 +12,6 @@
   "cpu_request": "2",
   "memory_request": "4Gi",
   "memory_limit": "6Gi",
-  "public_ingress": true,
+  "exposure": "service",
   "token_file": "current_config/api-token"
 }

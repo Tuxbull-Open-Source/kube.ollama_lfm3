@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Make exposure an installer choice: `service` is the one-container default;
+  `bearer_ingress` adds the token gateway and public Ingress.
+- Preserve compatibility with legacy `public_ingress` configuration files.
 - Set the default LFM3 runtime context to its 128K-token model maximum.
 - Treat 64K tokens as the maximum safe single-prompt input budget because
   Ollama context shifting reserves roughly half of the runtime context.

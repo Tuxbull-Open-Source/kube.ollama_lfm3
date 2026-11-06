@@ -18,6 +18,24 @@ provided by the operator's existing controller or external proxy. This project
 sets Traefik `websecure` and TLS routing annotations, but intentionally does
 not create a certificate, ACME issuer, DNS record, or cluster-wide controller.
 
+This prerequisite applies only to `bearer_ingress`. The default `service` mode
+has no public hostname or Ingress: access it from the cluster at
+`http://ollama.<namespace>.svc:11434/v1`, or add a separately operated access
+layer. Do not expose a service-mode Ollama Service to the public Internet:
+Ollama ignores local client API-key values.
+
+## Exposure migration
+
+Old configurations with `public_ingress: true` are accepted as
+`exposure: bearer_ingress`; `false` maps to `service`. New configurations use
+only `exposure`.
+
+Changing a live, installer-owned namespace from `bearer_ingress` to `service`
+does not automatically delete the old gateway/Ingress objects. Review and
+remove those labelled resources through your Kubernetes change process after
+confirming clients use the internal Service. This prevents an exposure-reducing
+reconfiguration from silently deleting a route that may still be in use.
+
 ## Rollback
 
 The installer does not delete PVCs automatically. Before changing a working
