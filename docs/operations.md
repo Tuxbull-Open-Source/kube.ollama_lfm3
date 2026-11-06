@@ -20,7 +20,7 @@ not create a certificate, ACME issuer, DNS record, or cluster-wide controller.
 
 This prerequisite applies only to `bearer_ingress`. The default `service` mode
 has no public hostname or Ingress: access it from the cluster at
-`http://ollama.<namespace>.svc:11434/v1`, or add a separately operated access
+`http://ollama.NAMESPACE.svc:11434/v1`, or add a separately operated access
 layer. Do not expose a service-mode Ollama Service to the public Internet:
 Ollama ignores local client API-key values.
 
