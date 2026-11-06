@@ -7,21 +7,73 @@ access, and a context-limit guard designed for agent demos.
 This is a small, single-node-friendly demo installer, **not** a production HA
 model service and not a general replacement for GPU inference.
 
-## Quick start
+## Quick start: choose the exposure mode first
+
+Both modes install one CPU-only Ollama runtime with a persistent model PVC. The
+choice controls how clients reach it.
+
+### Option 1 — internal ClusterIP Service (default, leanest)
+
+Use this when the client runs inside the cluster, or when an existing
+operator-managed access layer already protects the service. It creates exactly
+**one runtime container**: Ollama. It creates no token, gateway or Ingress.
 
 ```bash
 git clone https://github.com/Tuxbull-Open-Source/kube.ollama_lfm3.git
 cd kube.ollama_lfm3
-./configure.sh --namespace lfm3 --host lfm3.example.com
+./configure.sh --namespace lfm3 --exposure service
 ./install.sh --render-only
-# Default: only an internal ClusterIP Service and one Ollama container.
-# For public access with Bearer token, choose bearer_ingress at the prompt or:
-# ./configure.sh --namespace lfm3 --host lfm3.example.com --exposure bearer_ingress
-# Inspect artifacts/rendered.json. It includes a Secret only in bearer_ingress mode.
 ./install.sh
 ./doctor.sh
 ./maintain.sh status
 ```
+
+Connect an in-cluster client to:
+
+```text
+http://ollama.lfm3.svc:11434/v1
+```
+
+**Note:** Ollama's local server ignores client API-key/Bearer values. Do not
+expose this Service directly to the Internet.
+
+### Option 2 — public Ingress with Bearer token
+
+Use this when OpenWebUI or another external OpenAI-compatible client needs a
+public HTTPS endpoint and this installer must enforce a Bearer token. It creates
+**two runtime containers** in separate Deployments: Ollama plus a small Nginx
+gateway. The gateway validates the token before forwarding requests to Ollama.
+
+```bash
+git clone https://github.com/Tuxbull-Open-Source/kube.ollama_lfm3.git
+cd kube.ollama_lfm3
+./configure.sh \
+  --namespace lfm3 \
+  --host lfm3.example.com \
+  --exposure bearer_ingress
+./install.sh --render-only
+./install.sh
+./doctor.sh
+./maintain.sh status
+```
+
+The generated token is private and is never printed by the installer:
+
+```bash
+cat current_config/api-token
+```
+
+Configure the client with:
+
+```text
+Base URL: https://lfm3.example.com/v1
+Model:    lfm3-vl-hermes:2b
+API key:  <contents of current_config/api-token>
+```
+
+**Note:** This assumes that public DNS, TLS termination and a Traefik Ingress
+class already exist. The installer does not create certificates, DNS records or
+an Ingress controller.
 
 ## Exposure modes
 
