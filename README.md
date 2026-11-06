@@ -1,8 +1,8 @@
 # kube.ollama_lfm3
 
 Deploy **LiquidAI LFM3-VL-2B** through Ollama on Kubernetes/k3s with CPU-only
-inference, a persistent model cache, a token-protected OpenAI-compatible public
-endpoint, and a context-limit guard designed for agent demos.
+inference, a persistent model cache, optional Bearer-token-protected public
+access, and a context-limit guard designed for agent demos.
 
 This is a small, single-node-friendly demo installer, **not** a production HA
 model service and not a general replacement for GPU inference.
@@ -14,19 +14,41 @@ git clone https://github.com/Tuxbull-Open-Source/kube.ollama_lfm3.git
 cd kube.ollama_lfm3
 ./configure.sh --namespace lfm3 --host lfm3.example.com
 ./install.sh --render-only
-# Inspect artifacts/rendered.json. It includes a Secret: never commit or share it.
+# Default: only an internal ClusterIP Service and one Ollama container.
+# For public access with Bearer token, choose bearer_ingress at the prompt or:
+# ./configure.sh --namespace lfm3 --host lfm3.example.com --exposure bearer_ingress
+# Inspect artifacts/rendered.json. It includes a Secret only in bearer_ingress mode.
 ./install.sh
 ./doctor.sh
 ./maintain.sh status
 ```
 
-Retrieve the generated Bearer token only on the operator machine:
+## Exposure modes
+
+The configurator asks once which mode to use. For automation, set `exposure`
+in the private answers JSON or pass `--exposure`.
+
+| Mode | Installed runtime containers | Endpoint | Authentication |
+|---|---:|---|---|
+| `service` (default) | 1: Ollama | `http://ollama.<namespace>.svc:11434/v1` | None — use only within the cluster or behind your existing access layer |
+| `bearer_ingress` | 2: Ollama + Nginx gateway | `https://<host>/v1` | Generated Bearer token, enforced before Ollama |
+
+`service` creates no Ingress, Secret, ConfigMap, gateway Deployment, or
+gateway Service. It is the lean mode for internal clients. Ollama's local
+server accepts OpenAI-compatible API requests but ignores a client API key, so
+never expose this mode directly to the Internet.
+
+`bearer_ingress` is required when OpenWebUI or another external client needs a
+Bearer token. It creates the second, small Nginx gateway container because
+Ollama itself does not validate the local API key.
+
+Retrieve the generated Bearer token only in `bearer_ingress` mode:
 
 ```bash
 cat current_config/api-token
 ```
 
-Call the public endpoint:
+Call the protected public endpoint:
 
 ```bash
 curl -fsS https://lfm3.example.com/v1/models \
@@ -44,12 +66,13 @@ across pod restarts.
   token, no GPU resource/device request
 - `local-path` 10 GiB RWO PVC by default
 - private Service `ollama.<namespace>.svc:11434`
-- Nginx gateway that enforces `Authorization: Bearer …`
-- Traefik TLS Ingress to the gateway; DNS, public TLS certificate and Traefik
-  remain operator-owned prerequisites
+- Optional Nginx gateway that enforces Bearer authentication
+- Optional Traefik TLS Ingress to the gateway; DNS, public TLS certificate and
+  Traefik remain operator-owned prerequisites
 
-The token is created mode 0600 beside the private configuration. It is applied
-into the namespaced Kubernetes Secret but never printed by the installer.
+In `bearer_ingress` mode, the token is created mode 0600 beside the private
+configuration. It is applied into the namespaced Kubernetes Secret but never
+printed by the installer.
 
 ## Context is deliberately explicit
 
@@ -119,7 +142,8 @@ Important fields:
   (creates `num_ctx=128000`)
 - `output_tokens`: derived model `num_predict`; default 512
 - `memory_limit`: default 6Gi; validate actual cgroup peak before increasing it
-- `public_ingress`: defaults true; set false for internal-only Service access
+- `exposure`: `service` (default, one container) or `bearer_ingress` (two
+  containers plus public TLS Ingress and generated token)
 - `image`: pin a tested digest after validation; `latest` is only an initial
   convenience default
 

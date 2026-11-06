@@ -26,14 +26,26 @@ class ContextTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "cannot exceed 64000"):
             cli.validate(c, Path("/tmp/config.json"))
 
-    def test_render_has_cpu_and_gateway(self):
+    def test_service_render_has_only_ollama_runtime(self):
         c = cli.defaults()
-        docs = cli.render(c, "x" * 48)
+        docs = cli.render(c)
         payload = str(docs)
         self.assertIn("OLLAMA_LLM_LIBRARY", payload)
         self.assertIn("cpu", payload)
-        self.assertIn("WWW-Authenticate", payload)
         self.assertIn("lfm3-vl-hermes:2b", payload)
+        self.assertNotIn("lfm3-gateway", payload)
+        self.assertNotIn("Ingress", payload)
+        self.assertNotIn("Secret", payload)
+
+    def test_bearer_ingress_render_adds_gateway_and_token(self):
+        c = cli.defaults()
+        c["exposure"] = "bearer_ingress"
+        docs = cli.render(c, "x" * 48)
+        payload = str(docs)
+        self.assertIn("lfm3-gateway", payload)
+        self.assertIn("WWW-Authenticate", payload)
+        self.assertIn("Ingress", payload)
+        self.assertIn("Secret", payload)
 
 
 if __name__ == "__main__":
